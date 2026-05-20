@@ -171,3 +171,34 @@ npm install react-router-dom
 - OAuth 2.0 flow with Google
 - Loading states to prevent auth flicker
 - Form error handling
+
+---
+
+## Phase 4 — Core CRUD + React Architecture
+
+### Files created
+
+- `src/hooks/useRecipes.js` — fetch, create, update, delete recipes
+- `src/hooks/useRecipe.js` — single recipe with ingredients + steps
+- `src/components/RecipeCard.jsx` — recipe card with delete
+- `src/components/AddRecipeModal.jsx` — modal form to add recipe
+- `src/pages/RecipePage.jsx` — recipe detail page
+
+### New route added
+
+- `/recipe/:id` — dynamic route using URL params
+
+### Common errors
+
+- `Cannot find module` — always check filename spelling, React imports are case sensitive
+- Rename files with `mv oldname.js newname.js` in Git Bash
+
+### Concepts learned
+
+- Custom hooks for database logic
+- useCallback to prevent infinite loops
+- Promise.all for parallel requests
+- Optimistic UI updates
+- URL parameters with useParams
+- Event bubbling and stopPropagation
+- Loading, error, and empty states
