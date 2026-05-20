@@ -133,3 +133,41 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 - Row Level Security (RLS)
 - Database triggers
 - Environment variables for credentials
+
+---
+
+## Phase 3 — Authentication
+
+### Install React Router
+
+```bash
+npm install react-router-dom
+```
+
+### Files created
+
+- `src/context/AuthContext.jsx` — global auth state, login/logout functions
+- `src/components/ProtectedRoute.jsx` — redirects logged out users
+- `src/pages/LandingPage.jsx` — public home page
+- `src/pages/LoginPage.jsx` — email + Google login
+- `src/pages/SignupPage.jsx` — new account creation
+- `src/pages/DashboardPage.jsx` — protected main app page
+
+### Supabase settings
+
+- Authentication → Email → disable "Confirm email" for local dev
+- Authentication → Providers → enable Google (requires Google Cloud Console OAuth credentials)
+
+### Common errors
+
+- `Cannot find module ProtectedRoute` — check filename matches exactly, React is case sensitive
+
+### Concepts learned
+
+- React Context for global state
+- Custom hooks (useAuth)
+- Protected routes with redirects
+- JWT session handling
+- OAuth 2.0 flow with Google
+- Loading states to prevent auth flicker
+- Form error handling
