@@ -3,14 +3,25 @@ import { useAuth } from '../context/AuthContext'
 import { useRecipes } from '../hooks/useRecipes'
 import { RecipeCard } from '../components/RecipeCard'
 import { AddRecipeModal } from '../components/AddRecipeModal'
+import { ImportRecipeModal } from '../components/ImportRecipeModal'
+import { saveImportedRecipe } from '../lib/recipeImporter'
 
 export function DashboardPage() {
   const { user, signOut } = useAuth()
-  const { recipes, loading, error, createRecipe, deleteRecipe } = useRecipes()
+  const { recipes, loading, error, createRecipe, deleteRecipe, refetch } =
+    useRecipes()
   const [showModal, setShowModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
+  }
+
+  const handleImport = async (recipeData) => {
+    const { data, error } = await saveImportedRecipe(recipeData, user.id)
+    if (error) return { error }
+    await refetch()
+    return { data }
   }
 
   return (
@@ -65,12 +76,27 @@ export function DashboardPage() {
               {recipes.length} {recipes.length === 1 ? 'recipe' : 'recipes'}
             </p>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{ padding: '0.75rem 1.25rem' }}
-          >
-            + Add recipe
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={() => setShowImportModal(true)}
+              style={{
+                padding: '0.75rem 1.25rem',
+                background: '#f5f5f5',
+                border: '1px solid #e5e5e5',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              🔗 Import from URL
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              style={{ padding: '0.75rem 1.25rem' }}
+            >
+              + Add recipe
+            </button>
+          </div>
         </div>
 
         {/* Loading state */}
@@ -129,11 +155,18 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       {showModal && (
         <AddRecipeModal
           onClose={() => setShowModal(false)}
           onAdd={createRecipe}
+        />
+      )}
+
+      {showImportModal && (
+        <ImportRecipeModal
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImport}
         />
       )}
     </div>
