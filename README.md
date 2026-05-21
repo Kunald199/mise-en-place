@@ -33,7 +33,7 @@ screenshots/Substitution Functionality.png
 
 ## Video Demo
 
-Demo/Demo Mise-En-Place.mp4
+Demo/Demo Mise-En-Place (1).gif
 
 ## Architecture
 
