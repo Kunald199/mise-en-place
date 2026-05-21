@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useRecipe } from '../hooks/useRecipe'
+import { useFridge } from '../hooks/useFridge'
+import { scaleIngredients } from '../lib/scaler'
+import { getSubstitutions } from '../lib/substitution'
 
 export function RecipePage() {
   const { id } = useParams()
@@ -26,6 +29,24 @@ export function RecipePage() {
   const [newStep, setNewStep] = useState({ instruction: '', timer_mins: '' })
   const [addingIngredient, setAddingIngredient] = useState(false)
   const [addingStep, setAddingStep] = useState(false)
+
+  const { fridgeItems, addItem, removeItem } = useFridge()
+  const [servings, setServings] = useState(null)
+  const [substitutions, setSubstitutions] = useState([])
+  const [loadingSubs, setLoadingSubs] = useState(false)
+  const [newFridgeItem, setNewFridgeItem] = useState('')
+  const [showFridge, setShowFridge] = useState(false)
+
+  // Set initial servings when recipe loads
+  useEffect(() => {
+    if (recipe) setServings(recipe.servings)
+  }, [recipe])
+
+  // Compute scaled ingredients
+  const currentServings = servings || recipe?.servings || 4
+  const scaledIngredients = recipe
+    ? scaleIngredients(ingredients, recipe.servings, currentServings)
+    : []
 
   const handleAddIngredient = async (e) => {
     e.preventDefault()
@@ -53,6 +74,24 @@ export function RecipePage() {
       setNewStep({ instruction: '', timer_mins: '' })
       setAddingStep(false)
     }
+  }
+
+  const handleGetSubstitutions = async () => {
+    setLoadingSubs(true)
+    setSubstitutions([])
+    const { substitutions: subs, error } = await getSubstitutions(
+      ingredients,
+      fridgeItems
+    )
+    if (!error && subs) setSubstitutions(subs)
+    setLoadingSubs(false)
+  }
+
+  const handleAddFridgeItem = async (e) => {
+    e.preventDefault()
+    if (!newFridgeItem.trim()) return
+    await addItem(newFridgeItem)
+    setNewFridgeItem('')
   }
 
   if (loading)
@@ -201,12 +240,63 @@ export function RecipePage() {
             }}
           >
             <h2 style={{ fontSize: '1rem', fontWeight: '600' }}>Ingredients</h2>
-            <button
-              onClick={() => setAddingIngredient(!addingIngredient)}
-              style={{ fontSize: '13px', padding: '0.4rem 0.8rem' }}
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
             >
-              + Add
-            </button>
+              {/* Serving scaler */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '14px',
+                }}
+              >
+                <button
+                  onClick={() =>
+                    setServings((s) => Math.max(1, (s || recipe.servings) - 1))
+                  }
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    border: '1px solid #e5e5e5',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: '80px', textAlign: 'center' }}>
+                  {currentServings} servings
+                </span>
+                <button
+                  onClick={() => setServings((s) => (s || recipe.servings) + 1)}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    border: '1px solid #e5e5e5',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  +
+                </button>
+              </div>
+              <button
+                onClick={() => setAddingIngredient(!addingIngredient)}
+                style={{ fontSize: '13px', padding: '0.4rem 0.8rem' }}
+              >
+                + Add
+              </button>
+            </div>
           </div>
 
           {ingredients.length === 0 && !addingIngredient && (
@@ -215,7 +305,7 @@ export function RecipePage() {
             </p>
           )}
 
-          {ingredients.map((ingredient) => (
+          {scaledIngredients.map((ingredient) => (
             <div
               key={ingredient.id}
               style={{
@@ -227,9 +317,11 @@ export function RecipePage() {
               }}
             >
               <span style={{ fontSize: '14px' }}>
-                {ingredient.amount && `${ingredient.amount} `}
+                {ingredient.scaledAmount && (
+                  <strong>{ingredient.scaledAmount} </strong>
+                )}
                 {ingredient.unit && `${ingredient.unit} `}
-                <strong>{ingredient.name}</strong>
+                {ingredient.name}
                 {ingredient.notes && (
                   <span style={{ color: '#888' }}> — {ingredient.notes}</span>
                 )}
@@ -355,6 +447,7 @@ export function RecipePage() {
             borderRadius: '12px',
             padding: '1.5rem',
             border: '1px solid #e5e5e5',
+            marginBottom: '1.5rem',
           }}
         >
           <div
@@ -501,6 +594,180 @@ export function RecipePage() {
                 </button>
               </div>
             </form>
+          )}
+        </div>
+
+        {/* Fridge + Substitutions */}
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            border: '1px solid #e5e5e5',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <h2 style={{ fontSize: '1rem', fontWeight: '600' }}>
+              Ingredient Substitutions
+            </h2>
+            <button
+              onClick={() => setShowFridge(!showFridge)}
+              style={{ fontSize: '13px', padding: '0.4rem 0.8rem' }}
+            >
+              {showFridge ? 'Hide fridge' : 'My fridge'}
+            </button>
+          </div>
+
+          {showFridge && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '1rem',
+                background: '#f9f9f9',
+                borderRadius: '8px',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                What's in your fridge?
+              </p>
+              <form
+                onSubmit={handleAddFridgeItem}
+                style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                <input
+                  placeholder="e.g. Greek yogurt, oat milk..."
+                  value={newFridgeItem}
+                  onChange={(e) => setNewFridgeItem(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e5e5',
+                    fontSize: '13px',
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{ fontSize: '13px', padding: '0.5rem 0.75rem' }}
+                >
+                  Add
+                </button>
+              </form>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {fridgeItems.map((item) => (
+                  <span
+                    key={item.id}
+                    style={{
+                      fontSize: '13px',
+                      background: '#fff',
+                      border: '1px solid #e5e5e5',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    {item.name}
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#bbb',
+                        fontSize: '14px',
+                        padding: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleGetSubstitutions}
+            disabled={loadingSubs}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              fontSize: '14px',
+              marginBottom: substitutions.length > 0 ? '1rem' : 0,
+            }}
+          >
+            {loadingSubs
+              ? 'Finding substitutions...'
+              : '✨ Suggest substitutions'}
+          </button>
+
+          {substitutions.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+              }}
+            >
+              {substitutions.map((sub, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: '0.75rem',
+                    background: '#f9f9f9',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                      {sub.original}
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#888' }}>→</span>
+                    <span style={{ fontSize: '14px', color: '#2563eb' }}>
+                      {sub.substitute}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: '#888',
+                        marginLeft: 'auto',
+                      }}
+                    >
+                      {sub.ratio}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#555', margin: 0 }}>
+                    {sub.notes}
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
