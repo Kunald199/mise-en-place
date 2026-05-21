@@ -202,3 +202,54 @@ npm install react-router-dom
 - URL parameters with useParams
 - Event bubbling and stopPropagation
 - Loading, error, and empty states
+
+---
+
+## Phase 5 — AI Recipe Importer
+
+### Install and setup Supabase CLI
+
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref your-project-ref
+supabase secrets set GROQ_API_KEY=your_groq_key
+```
+
+### Create and deploy Edge Function
+
+```bash
+supabase functions new import-recipe
+supabase functions deploy import-recipe
+```
+
+### Architecture
+
+- Frontend fetches URL HTML via allorigins.win proxy (bypasses CORS)
+- Cleans HTML — strips scripts, styles, tags
+- Sends clean text to Supabase Edge Function
+- Edge Function calls Groq API and returns structured JSON
+- Frontend saves recipe + ingredients + steps to Supabase
+
+### Files created
+
+- `supabase/functions/import-recipe/index.ts` — serverless function, calls Groq
+- `src/lib/groq.js` — fetches URL, cleans HTML, calls edge function
+- `src/lib/recipeImporter.js` — saves full recipe with ingredients + steps
+- `src/components/ImportRecipeModal.jsx` — UI for URL import
+
+### Common errors
+
+- `Could not fetch that URL` — Supabase free tier blocks outbound requests, solution is to fetch from frontend instead
+- Deploy error with backticks — avoid template literals in Edge Functions, use string concatenation
+- Docker warning on deploy — harmless, Docker only needed for local testing
+
+### Concepts learned
+
+- CORS and why browsers block cross-origin requests
+- Supabase Edge Functions (serverless backend)
+- Deno runtime vs Node.js
+- Why we fetch from frontend not server (free tier network restrictions)
+- Sequential DB inserts for dependency chains
+- Structured JSON prompting
+- Server-side secrets with Deno.env.get()
