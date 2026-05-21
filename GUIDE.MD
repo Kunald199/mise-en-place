@@ -253,3 +253,29 @@ supabase functions deploy import-recipe
 - Sequential DB inserts for dependency chains
 - Structured JSON prompting
 - Server-side secrets with Deno.env.get()
+
+---
+
+## Phase 6 — Smart Scaling + Substitution
+
+### Files created
+
+- `src/lib/scaler.js` — GCD algorithm, decimal to fraction, ingredient scaling
+- `src/lib/substitution.js` — builds prompt, calls edge function
+- `src/hooks/useFridge.js` — fridge items CRUD
+- `supabase/functions/get-substitutions/index.ts` — Groq AI substitution function
+
+### Deploy new edge function
+
+```bash
+supabase functions new get-substitutions
+supabase functions deploy get-substitutions
+```
+
+### Concepts learned
+
+- GCD algorithm for fraction simplification
+- Floating point precision handling
+- Pure utility functions
+- Derived state computed from servings
+- Multiple Edge Functions in one project
